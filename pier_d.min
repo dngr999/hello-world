@@ -1,0 +1,280 @@
+#**********************************************************************
+*    IBDAS Model            *    COWI    *    All Rights Reserved     *
+***********************************************************************
+*-Model file name-----------------------------------------------------*
+*    pier_d                                                           *
+*-Purpose-------------------------------------------------------------*
+*                                                                     *
+*    Multi span segment bridge                                        *
+*                                                                     *
+*    Pier model - Documentation of pier - Plan/Elevation drawing      *
+*                                                                     *
+*-Restrictions and Limitations----------------------------------------*
+*                                                                     *
+***********************************************************************
+*-Submodels-----------------------------------------------------------*
+*-Revision------------------------------------------------------------*
+*    rv date       by    reason                                       *
+*    -- ---------- ----  ------                                       *
+*    00 2014-10-11 rom   original                                     *
+#**********************************************************************
+
+gref=left
+
+%ipier=/equal %ipier            ! actual pier
+%pier1=/equal %pier1            ! numbering of piers
+
+string100='pier' !write filename
+model1=fixed write logical_name 'my_bridge_dir' plus string100 !from 1 to ($n-2)
+
+model9001=/equal model9001      ! bridge
+
+model101=/equal model(100+%ipier) in model9001   ! pier
+
+%ncol=/equal %ncol in model101
+%nfou=/equal %nfou in model101
+%nbear=/equal %nbear in model101
+
+%pilefoun=/equal %pilefoun in model101
+
+sref1=/equal sref1 in model101               ! pier coordinate system
+surface101=/equal surface8001 in model101    ! pier axis
+
+surface1000=/equal surface8001 in model101   ! cut surface - section drawing
+surface2000=/equal surface8002 in model101   ! cut surface - elevation drawing
+
+cref1,201=/equal cref1,201 in model9001
+
+! cut surfaces
+surface3,5=sref1 nz origo dz -10,10
+surface6,4=sref1 ny origo dy -10,10
+
+
+%factor=1000    ! measure factor on figurs
+%decimal=0      ! number of decimals on figures
+
+%scale=1        ! scale
+%res=1e-4       ! resolution
+
+! graphics
+graphics1-63=all solid white
+%gr(1-63)=1
+
+! text styles
+text_style1-63=fount30 solid white height 2.5 width 2.5
+
+! level numbers
+%lev(1-63)=1
+
+
+flag1=false   !  true : show piles on drawings
+              ! false : piles not shown (default)
+
+
+!----------------
+! Plan
+!----------------
+&obj=1000
+&measure=1000
+
+! substructure
+do $col=1-%ncol
+  &obj=&obj+1
+  object&obj=sref1
+    shape1=model$col in model101 graphics%gr(20) level%lev(20)   ! pier shaft
+enddo
+
+
+do $bear=1-%nbear
+  &obj=&obj+1
+  object&obj=sref1
+    shape1=model(400+$bear) in model101 graphics%gr(20) level%lev(20)   ! bearing
+enddo
+
+
+if %pilefoun eq 1 then
+  do $fou=1-%nfou
+    &obj=&obj+1
+    object&obj=sref1
+      shape1-4=select all bl3,7,11,12 inside box1 in model100 in model9001 in model(100+$fou) in model101 graphics%gr(20) level%lev(20)   ! pile cap
+
+    if flag1 then
+      &obj=&obj+1
+      object&obj=sref1
+        shape1=model1 in model9001 in model(100+$fou) in model101 box_type structural graphics%gr(22) level%lev(22)   ! pile
+    endif
+  enddo
+
+else
+  do $fou=1-%nfou
+    if exist box1 in model(200+$fou) in model101 then
+      &obj=&obj+1
+      object&obj=sref1
+        shape1=box1 in model(200+$fou) in model101 box_type structural graphics%gr(20) level%lev(20)   ! foundation
+    endif
+  enddo
+endif
+
+! pier axis
+&obj=&obj+1
+object&obj=sref1
+  cut6,4=surface6,4
+  geom$n=ay ly in sref1 graphics%gr(50) level%lev(20)
+
+! numbering of pier axis
+point4=sref1 ip ly surface4 dy 5
+&measure=&measure+1
+measure&measure=sref1 level%lev(60) text_style1 arrow_head10 xscale 0 yscale 0
+  mpoint$n=point4 z horizontal dx 0.01*%scale dy 0 no_arrow 'P' plus number (%pier1+%ipier-1) oc
+
+
+%obj(1000)=&obj-1000           ! number of objects  to be placed on plan drawing
+%measure(1000)=&measure-1000   ! number of measures to be placed on plan drawing
+
+
+!----------------
+! Elevation
+!----------------
+&obj=2000
+&measure=2000
+
+! substructure
+&obj=&obj+1
+object&obj=cref1 section y+ surface2000 graphics%gr(21) level%lev(20)
+  do $col=1-%ncol
+    shape$n=model$col in model101   ! pier shaft
+  enddo
+  do $bear=1-%nbear
+    shape$n=model(400+$bear) in model101   ! bearing
+  enddo
+  if %pilefoun eq 1 then
+    do $fou=1-%nfou
+      shape$n=box1 in model100 in model9001 in model(100+$fou) in model101   ! pile cap
+      if flag1 then
+        shape$n=model1 in model9001 in model(100+$fou) in model101 box_type structural   ! pile
+      endif
+    enddo
+  else
+    do $fou=1-%nfou
+      if exist box1 in model(200+$fou) in model101 then
+        shape$n=box1 in model(200+$fou) in model101 box_type structural   ! foundation
+      endif
+    enddo
+  endif
+
+
+! pier axis
+&obj=&obj+1
+object&obj=cref1 section y+ surface2000 graphics%gr(50) level%lev(20)
+  cut3,5=surface3,5
+  geom$n=surface101
+
+
+#
+! substructure
+do $col=1-%ncol
+  &obj=&obj+1
+  object&obj=sref1
+    shape1=model$col in model101 graphics%gr(21) level%lev(20)   ! pier shaft
+enddo
+
+do $bear=1-%nbear
+  &obj=&obj+1
+  object&obj=sref1
+    shape1=model(100+$bear) in model101 graphics%gr(21) level%lev(20)   ! bearing
+enddo
+
+if %npile ge 1 then
+  &obj=&obj+1
+  object&obj=sref1
+    shape1-4=select all bl3,7,11,12 inside box1 in model100 in model9001 in model100 in model101 graphics%gr(21) level%lev(20)   ! pile cap
+
+  if flag1 then
+    &obj=&obj+1
+    object&obj=sref1
+      shape1=model1 in model9001 in model100 in model101 box_type structural graphics%gr(21) level%lev(22)   ! pile
+  endif
+
+else
+  if exist box100 in model101 then
+    &obj=&obj+1
+    object&obj=sref1
+      shape1=box100 in model101 box_type structural graphics%gr(21) level%lev(20)   ! foundation
+  endif
+endif
+
+
+! pier axis
+&obj=&obj+1
+object&obj=sref1
+  cut3,5=surface3,5
+  geom$n=az lz in sref1 graphics%gr(50) level%lev(20)
+#
+
+
+! numbering of pier axis
+point5=sref1 ip lz surface5 dy 5
+&measure=&measure+1
+measure&measure=sref1 level%lev(60) text_style1 arrow_head10 xscale 0 yscale 0
+  mpoint$n=point5 z horizontal dx 0 dy -20*%scale no_arrow 'P' plus number (%pier1+%ipier-1) oc
+
+
+! measure, elevations in hrl
+&measure=&measure+1
+measure&measure=cref201 in model9001 level%lev(60) text_style1 arrow_head2 factor 1 decimals 3
+  mpoint$n=ip ls in cref1 in model9001 surface101 z horizontal dy 5*%scale figure ar
+
+! measure, level of foundation
+do $fou=1-%nfou
+  &measure=&measure+1
+  measure&measure=cref201 in model9001 level%lev(60) text_style1 arrow_head2 factor 1 decimals 3
+    mpoint$n=ip lz in sref1 surface3 in model(100*(2-%pilefoun)+$fou) in model101 z horizontal dy -5*%scale figure ar
+enddo
+
+! measure, height of piers
+&measure=&measure+1
+measure&measure=sref1 graphics%gr(60) level%lev(60) text_style1 short factor%factor decimals%decimal
+  do $col=1-%ncol
+    mline$n=ay internal distance -10*%scale
+      node1-2=ip lz in sref1 surface1001,1002 in model$col in model101 figure ac
+  enddo
+
+
+%obj(2000)=&obj-2000           ! number of objects  to be placed on elevation drawing
+%measure(2000)=&measure-2000   ! number of measures to be placed on elevation drawing
+
+
+
+!----------------
+! Section
+!----------------
+&obj=3000
+&measure=3000
+
+! substructure
+&obj=&obj+1
+object&obj=cref1 section s+ surface1000 graphics%gr(21) level%lev(20)
+  do $col=1-%ncol
+    shape$n=model$col in model101   ! pier shaft
+  enddo
+  do $bear=1-%nbear
+    shape$n=model(400+$bear) in model101   ! bearing
+  enddo
+  if %pilefoun eq 1  then
+    do $fou=1-%nfou
+      shape$n=box1 in model100 in model9001 in model(100+$fou) in model101   ! pile cap
+      if flag1 then
+        shape$n=model1 in model9001 in model(100+$fou) in model101 box_type structural   ! pile
+      endif
+    enddo
+  else
+    do $fou=1-%nfou
+      if exist box1 in model(200+$fou) in model101 then
+        shape$n=box1 in model(200+$fou) in model101 box_type structural   ! foundation
+      endif
+    enddo
+  endif
+
+
+%obj(3000)=&obj-3000           ! number of objects  to be placed on section drawing
+%measure(3000)=&measure-3000   ! number of measures to be placed on section drawing
